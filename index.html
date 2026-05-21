@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>BoloBahi — Transport Cashbook</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:#F4F4F0;min-height:100vh;}
+.app{max-width:420px;margin:0 auto;min-height:100vh;background:#F4F4F0;}
+.header{background:#fff;border-bottom:0.5px solid #e0e0e0;padding:12px 16px 8px;position:sticky;top:0;z-index:50;}
+.header-top{display:flex;align-items:center;justify-content:space-between;}
+.logo{font-size:19px;font-weight:600;color:#1a1a1a;}
+.logo span{color:#1D9E75;}
+.tagline{font-size:10px;color:#aaa;margin-top:1px;}
+.balance-bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 16px;background:#fff;border-bottom:0.5px solid #e0e0e0;}
+.bal-card{background:#F4F4F0;border-radius:10px;padding:8px 10px;}
+.bal-label{font-size:10px;color:#888;margin-bottom:2px;}
+.bal-amount{font-size:15px;font-weight:600;}
+.bal-amount.cash{color:#1D9E75;}
+.bal-amount.bank{color:#185FA5;}
+.tabs{display:flex;background:#fff;border-bottom:0.5px solid #e0e0e0;overflow-x:auto;position:sticky;top:53px;z-index:49;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex:0 0 auto;padding:9px 10px;font-size:11px;text-align:center;color:#888;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500;}
+.tab i{display:block;font-size:15px;margin-bottom:1px;}
+.content{padding:12px 16px 80px;}
+.add-btn{width:100%;background:#1D9E75;color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;}
+.export-btn{width:100%;background:#fff;color:#185FA5;border:0.5px solid #185FA5;border-radius:10px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:12px;}
+.section-label{font-size:11px;color:#888;font-weight:500;margin-bottom:8px;letter-spacing:0.5px;text-transform:uppercase;}
+.entry-card{background:#fff;border:0.5px solid #e8e8e8;border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.entry-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.entry-party{font-size:14px;font-weight:500;color:#1a1a1a;}
+.entry-amount{font-size:15px;font-weight:600;}
+.amount-receipt{color:#1D9E75;}
+.amount-payment{color:#E24B4A;}
+.entry-sub{font-size:11px;color:#aaa;margin-top:2px;}
+.badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;}
+.badge-pending{background:#FAEEDA;color:#854F0B;}
+.badge-received{background:#EAF3DE;color:#3B6D11;}
+.badge-receipt{background:#EAF3DE;color:#3B6D11;}
+.badge-payment{background:#FCEBEB;color:#A32D2D;}
+.trip-card{background:#fff;border:0.5px solid #e8e8e8;border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+.trip-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.trip-lorry{font-size:13px;font-weight:600;color:#1a1a1a;}
+.trip-route{font-size:11px;color:#888;}
+.trip-margin{font-size:13px;font-weight:600;color:#1D9E75;}
+.trip-side{background:#F4F4F0;border-radius:8px;padding:8px 10px;margin-bottom:6px;}
+.trip-side-label{font-size:9px;color:#aaa;text-transform:uppercase;font-weight:500;margin-bottom:4px;}
+.trip-side-party{font-size:13px;font-weight:500;color:#1a1a1a;}
+.trip-side-nums{display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;}
+.tsn{font-size:11px;color:#888;}
+.tsn span{color:#1a1a1a;font-weight:500;}
+.btn-edit{padding:6px 10px;background:#F4F4F0;color:#555;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-delete{padding:6px 10px;background:#FFF0F0;color:#E24B4A;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:420px;padding:16px 16px 32px;max-height:92vh;overflow-y:auto;}
+.modal-handle{width:40px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 14px;}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:6px;color:#1a1a1a;}
+.form-row{margin-bottom:10px;}
+.form-label{font-size:11px;color:#666;margin-bottom:3px;display:block;}
+.form-row input,.form-row select{width:100%;padding:9px 11px;font-size:13px;border:0.5px solid #ddd;border-radius:9px;background:#fafafa;color:#1a1a1a;font-family:'DM Sans',sans-serif;outline:none;}
+.form-row input:focus,.form-row select:focus{border-color:#1D9E75;background:#fff;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.modal-actions{display:flex;gap:8px;margin-top:14px;}
+.btn-cancel{flex:1;padding:10px;border:0.5px solid #ddd;border-radius:10px;background:transparent;color:#666;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-save{flex:2;padding:10px;background:#1D9E75;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-save:disabled,.btn-start:disabled{opacity:0.6;cursor:not-allowed;}
+/* Voice button */
+.voice-btn{width:100%;padding:12px;border:0.5px solid #1D9E75;border-radius:10px;background:#f0faf6;color:#1D9E75;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;font-family:'DM Sans',sans-serif;transition:all 0.2s;}
+.voice-btn.listening{background:#1D9E75;color:#fff;border-color:#1D9E75;animation:pulse 1.2s infinite;}
+.voice-btn.processing{background:#FAEEDA;color:#854F0B;border-color:#854F0B;}
+.voice-btn i{font-size:18px;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.7;}}
+.voice-transcript{background:#f9f9f9;border:0.5px solid #e8e8e8;border-radius:8px;padding:8px 12px;font-size:12px;color:#666;margin-bottom:12px;min-height:36px;line-height:1.5;display:none;}
+.voice-transcript.show{display:block;}
+.voice-hint{font-size:11px;color:#aaa;text-align:center;margin-bottom:12px;line-height:1.6;}
+/* Setup */
+.setup-screen{padding:24px 16px;}
+.setup-icon{font-size:38px;color:#1D9E75;margin-bottom:12px;}
+.setup-title{font-size:21px;font-weight:600;color:#1a1a1a;margin-bottom:6px;}
+.setup-sub{font-size:13px;color:#888;margin-bottom:22px;line-height:1.6;}
+.btn-start{width:100%;background:#1D9E75;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:8px;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:300;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.toast.error{background:#E24B4A;}
+.toast.success{background:#1D9E75;}
+.empty-state{text-align:center;padding:36px 0;color:#aaa;font-size:13px;}
+.empty-state i{font-size:34px;display:block;margin-bottom:8px;color:#ccc;}
+.loading-state{text-align:center;padding:36px 0;color:#aaa;font-size:13px;}
+/* Dashboard */
+.dash-period{background:#fff;border-radius:12px;border:0.5px solid #e8e8e8;padding:12px 14px;margin-bottom:12px;}
+.dash-period-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.dash-period-row input{flex:1;min-width:100px;padding:7px 10px;font-size:12px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa;color:#1a1a1a;font-family:'DM Sans',sans-serif;outline:none;}
+.dash-period-row button{padding:7px 14px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.dash-card{background:#fff;border-radius:12px;border:0.5px solid #e8e8e8;padding:12px 14px;}
+.dash-card.full{grid-column:span 2;}
+.dash-label{font-size:10px;color:#888;margin-bottom:4px;}
+.dash-val{font-size:18px;font-weight:600;color:#1a1a1a;}
+.dash-val.green{color:#1D9E75;}
+.dash-val.red{color:#E24B4A;}
+.dash-val.blue{color:#185FA5;}
+.dash-sub{font-size:10px;color:#aaa;margin-top:2px;}
+.pod-list{background:#fff;border-radius:12px;border:0.5px solid #e8e8e8;padding:12px 14px;margin-bottom:12px;}
+.pod-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid #f5f5f5;}
+.pod-item:last-child{border-bottom:none;}
+.pod-party{font-size:13px;font-weight:500;color:#1a1a1a;}
+.pod-lorry{font-size:11px;color:#aaa;margin-top:1px;}
+.pod-date{font-size:10px;color:#bbb;text-align:right;}
+.ledger-card{background:#fff;border:0.5px solid #e8e8e8;border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.ledger-party{font-size:14px;font-weight:500;color:#1a1a1a;}
+.ledger-amount{font-size:15px;font-weight:600;}
+.ledger-sub{font-size:11px;color:#aaa;margin-top:2px;}
+.confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:#fff;border-radius:16px;padding:24px 20px;width:280px;text-align:center;}
+.confirm-title{font-size:15px;font-weight:600;margin-bottom:8px;}
+.confirm-sub{font-size:13px;color:#888;margin-bottom:20px;}
+.confirm-actions{display:flex;gap:8px;}
+.btn-confirm-cancel{flex:1;padding:10px;border:0.5px solid #ddd;border-radius:10px;background:transparent;color:#666;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-confirm-delete{flex:1;padding:10px;background:#E24B4A;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div id="setup-view">
+    <div class="header">
+      <div class="header-top"><div class="logo">Bolo<span>Bahi</span></div></div>
+      <div class="tagline">Transport broker cashbook</div>
+    </div>
+    <div class="setup-screen">
+      <div class="setup-icon"><i class="ti ti-book"></i></div>
+      <div class="setup-title">Welcome to BoloBahi</div>
+      <div class="setup-sub">Enter your opening balances to start tracking your brokerage.</div>
+      <div class="form-row"><label class="form-label">Firm / broker name</label><input type="text" id="opening-firm" placeholder="e.g. New Sanjeev Roadlines"/></div>
+      <div class="form-row"><label class="form-label">Cash in hand (₹)</label><input type="number" id="opening-cash" placeholder="e.g. 12500"/></div>
+      <div class="form-row"><label class="form-label">Bank balance (₹)</label><input type="number" id="opening-bank" placeholder="e.g. 245000"/></div>
+      <button class="btn-start" id="btn-start-app" onclick="startApp()">Start BoloBahi →</button>
+    </div>
+  </div>
+  <div id="main-view" style="display:none;">
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">Bolo<span>Bahi</span></div>
+        <span style="font-size:11px;color:#aaa;" id="firm-display"></span>
+      </div>
+      <div class="tagline" id="today-date"></div>
+    </div>
+    <div class="balance-bar">
+      <div class="bal-card"><div class="bal-label"><i class="ti ti-wallet"></i> Cash in hand</div><div class="bal-amount cash" id="cash-balance">₹0</div></div>
+      <div class="bal-card"><div class="bal-label"><i class="ti ti-building-bank"></i> Bank balance</div><div class="bal-amount bank" id="bank-balance">₹0</div></div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('dashboard')" id="tab-dashboard"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+      <div class="tab" onclick="switchTab('freight')" id="tab-freight"><i class="ti ti-truck"></i>Freight</div>
+      <div class="tab" onclick="switchTab('cash')" id="tab-cash"><i class="ti ti-wallet"></i>Cash</div>
+      <div class="tab" onclick="switchTab('bank')" id="tab-bank"><i class="ti ti-building-bank"></i>Bank</div>
+      <div class="tab" onclick="switchTab('debtors')" id="tab-debtors"><i class="ti ti-arrow-down-circle"></i>Debtors</div>
+      <div class="tab" onclick="switchTab('creditors')" id="tab-creditors"><i class="ti ti-arrow-up-circle"></i>Creditors</div>
+    </div>
+    <div class="content" id="content-area"></div>
+  </div>
+</div>
+
+<!-- Freight Income Modal -->
+<div class="modal-overlay" id="modal-income">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><i class="ti ti-arrow-down-circle" style="color:#1D9E75"></i> Freight income entry</div>
+    <input type="hidden" id="fi-id"/>
+
+    <button class="voice-btn" id="voice-btn-income" onclick="startVoice('income')">
+      <i class="ti ti-microphone"></i> Tap and speak in Hindi / English
+    </button>
+    <div class="voice-hint">Example: "HFC Logistics ka lorry OD05AB1234 Bhubaneswar se Chennai, freight aathee hazaar advance sattar hazaar"</div>
+    <div class="voice-transcript" id="transcript-income"></div>
+
+    <div class="form-row"><label class="form-label">Party name (who pays you)</label><input type="text" id="fi-party" placeholder="e.g. HFC Logistics"/></div>
+    <div class="form-row"><label class="form-label">Lorry number</label><input type="text" id="fi-lorry" placeholder="OD 05 AB 1234"/></div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">From</label><input type="text" id="fi-from" placeholder="Bhubaneswar"/></div>
+      <div class="form-row"><label class="form-label">To</label><input type="text" id="fi-to" placeholder="Chennai"/></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Freight agreed (₹)</label><input type="number" id="fi-freight" placeholder="80000"/></div>
+      <div class="form-row"><label class="form-label">Advance received (₹)</label><input type="number" id="fi-advance" placeholder="70000"/></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">POD status</label>
+        <select id="fi-pod"><option value="POD Pending">POD Pending</option><option value="POD Received">POD Received</option></select>
+      </div>
+      <div class="form-row"><label class="form-label">Date</label><input type="date" id="fi-date"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-income')">Cancel</button>
+      <button class="btn-save" id="save-income-btn" onclick="saveIncome()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Freight Expense Modal -->
+<div class="modal-overlay" id="modal-expense">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><i class="ti ti-arrow-up-circle" style="color:#E24B4A"></i> Freight expense entry</div>
+    <input type="hidden" id="fe-id"/>
+
+    <button class="voice-btn" id="voice-btn-expense" onclick="startVoice('expense')">
+      <i class="ti ti-microphone"></i> Tap and speak in Hindi / English
+    </button>
+    <div class="voice-hint">Example: "Murugan ka lorry OD05AB1234, freight pচhatter hazaar advance sattar hazaar"</div>
+    <div class="voice-transcript" id="transcript-expense"></div>
+
+    <div class="form-row"><label class="form-label">Lorry owner name (who you pay)</label><input type="text" id="fe-owner" placeholder="e.g. Murugan"/></div>
+    <div class="form-row"><label class="form-label">Lorry number</label><input type="text" id="fe-lorry" placeholder="OD 05 AB 1234"/></div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Freight agreed (₹)</label><input type="number" id="fe-freight" placeholder="75000"/></div>
+      <div class="form-row"><label class="form-label">Advance paid (₹)</label><input type="number" id="fe-advance" placeholder="70000"/></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">POD status</label>
+        <select id="fe-pod"><option value="POD Pending">POD Pending</option><option value="POD Received">POD Received</option></select>
+      </div>
+      <div class="form-row"><label class="form-label">Date</label><input type="date" id="fe-date"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-expense')">Cancel</button>
+      <button class="btn-save" id="save-expense-btn" onclick="saveExpense()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cash Modal -->
+<div class="modal-overlay" id="modal-cash">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><i class="ti ti-wallet"></i> Cash entry</div>
+    <input type="hidden" id="c-id"/>
+    <div class="form-row"><label class="form-label">Type</label><select id="c-type"><option value="Receipt">Receipt (money in)</option><option value="Payment">Payment (money out)</option></select></div>
+    <div class="form-row"><label class="form-label">Party name</label><input type="text" id="c-party" placeholder="Ravi Transport"/></div>
+    <div class="form-row"><label class="form-label">Narration</label><input type="text" id="c-narration" placeholder="Freight received for OD05AB1234"/></div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Amount (₹)</label><input type="number" id="c-amount" placeholder="15000"/></div>
+      <div class="form-row"><label class="form-label">Date</label><input type="date" id="c-date"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-cash')">Cancel</button>
+      <button class="btn-save" id="save-cash-btn" onclick="saveCash()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bank Modal -->
+<div class="modal-overlay" id="modal-bank">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title"><i class="ti ti-building-bank"></i> Bank entry</div>
+    <input type="hidden" id="b-id"/>
+    <div class="form-row"><label class="form-label">Type</label><select id="b-type"><option value="Receipt">Receipt (money in)</option><option value="Payment">Payment (money out)</option></select></div>
+    <div class="form-row"><label class="form-label">Party name</label><input type="text" id="b-party" placeholder="Suresh Logistics"/></div>
+    <div class="form-row"><label class="form-label">Narration</label><input type="text" id="b-narration" placeholder="NEFT received"/></div>
+    <div class="form-grid">
+      <div class="form-row"><label class="form-label">Amount (₹)</label><input type="number" id="b-amount" placeholder="50000"/></div>
+      <div class="form-row"><label class="form-label">Date</label><input type="date" id="b-date"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-bank')">Cancel</button>
+      <button class="btn-save" id="save-bank-btn" onclick="saveBank()">Save entry</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Delete entry?</div>
+    <div class="confirm-sub">This cannot be undone.</div>
+    <div class="confirm-actions">
+      <button class="btn-confirm-cancel" onclick="closeConfirm()">Cancel</button>
+      <button class="btn-confirm-delete" id="btn-confirm-delete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPA_URL='https://jienvymxmwxlqvqehjrw.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppZW52eW14bXd4bHF2cWVoanJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkzNTQzNTksImV4cCI6MjA5NDkzMDM1OX0.nAHhapQSLQyzbF7shQbMaTSICCq7bXIrREAuS8leY2I';
+const H={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=representation'};
+let S={cashBalance:0,bankBalance:0,firmName:'',activeTab:'dashboard'};
+let deleteCallback=null;
+let recognition=null;
+let isListening=false;
+
+const todayStr=()=>new Date().toISOString().split('T')[0];
+const fyStart=()=>{const n=new Date();return(n.getMonth()>=3?n.getFullYear():n.getFullYear()-1)+'-04-01';};
+const fyEnd=()=>{const n=new Date();return(n.getMonth()>=3?n.getFullYear()+1:n.getFullYear())+'-03-31';};
+function fmt(n){return '₹'+Math.round(n).toLocaleString('en-IN');}
+function fmtDate(d){if(!d)return '';return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});}
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type?' '+type:'');setTimeout(()=>t.className='toast',2500);}
+
+async function supa(method,table,body,params){
+  let url=SUPA_URL+'/rest/v1/'+table;
+  if(params)url+='?'+params;
+  const opts={method,headers:H};
+  if(body)opts.body=JSON.stringify(body);
+  const res=await fetch(url,opts);
+  if(!res.ok){const e=await res.text();throw new Error(e);}
+  if(method==='DELETE'||res.status===204)return null;
+  return res.json();
+}
+
+// ── VOICE ENGINE ──────────────────────────────────────────
+const wordsToNum={
+  'ek':1,'do':2,'teen':3,'char':4,'paanch':5,'chhe':6,'saat':7,'aath':8,'nau':9,'das':10,
+  'gyarah':11,'barah':12,'terah':13,'chaudah':14,'pandrah':15,'solah':16,'satrah':17,'atharah':18,'unnis':19,'bees':20,
+  'tees':30,'chaalees':40,'pachaas':50,'saath':60,'sattar':70,'assi':80,'nabbe':90,
+  'sau':100,'hazaar':1000,'lakh':100000,
+  'one':1,'two':2,'three':3,'four':4,'five':5,'six':6,'seven':7,'eight':8,'nine':9,'ten':10,
+  'eleven':11,'twelve':12,'thirteen':13,'fourteen':14,'fifteen':15,'sixteen':16,'seventeen':17,'eighteen':18,'nineteen':19,'twenty':20,
+  'thirty':30,'forty':40,'fifty':50,'sixty':60,'seventy':70,'eighty':80,'ninety':90,
+  'hundred':100,'thousand':1000,'lakh':100000,
+  'ek sau':100,'do sau':200,'teen sau':300,'char sau':400,'paanch sau':500,
+  'aathee':80000,'sathee':60000,'sattar':70000,'pachaas':50000,'tees':30000
+};
+
+function parseHindiNumber(str){
+  str=str.toLowerCase().trim();
+  // Direct big number words
+  const bigMap={
+    'aathee hazaar':80000,'sattar hazaar':70000,'sathee hazaar':60000,'pachaas hazaar':50000,
+    'chaalees hazaar':40000,'tees hazaar':30000,'bees hazaar':20000,'das hazaar':10000,
+    'ek lakh':100000,'do lakh':200000,'teen lakh':300000,
+    'eighty thousand':80000,'seventy thousand':70000,'sixty thousand':60000,
+    'fifty thousand':50000,'forty thousand':40000,'thirty thousand':30000,
+    'twenty thousand':20000,'ten thousand':10000,'one lakh':100000
+  };
+  for(const[k,v] of Object.entries(bigMap)){if(str.includes(k))return v;}
+  // Pure digit
+  const num=parseInt(str.replace(/[^0-9]/g,''));
+  if(!isNaN(num)&&num>0)return num;
+  return null;
+}
+
+function extractLorryNumber(text){
+  // Match patterns like OD05AB1234, OD 05 AB 1234, HR26-DK-1234
+  const match=text.match(/[A-Z]{2}\s*\d{2}\s*[A-Z]{1,2}\s*\d{4}/i);
+  if(match)return match[0].toUpperCase().replace(/\s+/g,' ');
+  return null;
+}
+
+function parseVoiceIncome(text){
+  const t=text.toLowerCase();
+  const result={};
+
+  // Lorry number
+  const lorry=extractLorryNumber(text);
+  if(lorry)result.lorry=lorry;
+
+  // Route: "X se Y" or "from X to Y"
+  const seMatch=t.match(/(\w+)\s+se\s+(\w+)/);
+  const fromMatch=t.match(/from\s+(\w+)\s+to\s+(\w+)/);
+  if(seMatch){result.from=capitalize(seMatch[1]);result.to=capitalize(seMatch[2]);}
+  else if(fromMatch){result.from=capitalize(fromMatch[1]);result.to=capitalize(fromMatch[2]);}
+
+  // Freight: "freight X hazaar/thousand" — look for freight amount
+  const freightPatterns=[
+    /freight\s+([\w\s]+?)\s*(?:hazaar|thousand|lakh)/i,
+    /freight\s+(\d+)/i,
+  ];
+  for(const p of freightPatterns){
+    const m=t.match(p);
+    if(m){const n=parseHindiNumber(m[1]+' '+(m[0].match(/hazaar|thousand|lakh/i)||[''])[0]);if(n)result.freight=n;break;}
+  }
+
+  // Advance: "advance X hazaar/thousand"
+  const advPatterns=[
+    /advance\s+([\w\s]+?)\s*(?:hazaar|thousand|lakh)/i,
+    /advance\s+(\d+)/i,
+  ];
+  for(const p of advPatterns){
+    const m=t.match(p);
+    if(m){const n=parseHindiNumber(m[1]+' '+(m[0].match(/hazaar|thousand|lakh/i)||[''])[0]);if(n)result.advance=n;break;}
+  }
+
+  // Party name: first capitalized words before "ka" or "ka lorry"
+  const kaMatch=text.match(/^([\w\s]+?)\s+ka\s+lorry/i);
+  const ofMatch=text.match(/^([\w\s]+?)\s+lorry/i);
+  if(kaMatch)result.party=kaMatch[1].trim();
+  else if(ofMatch)result.party=ofMatch[1].trim();
+
+  return result;
+}
+
+function parseVoiceExpense(text){
+  const t=text.toLowerCase();
+  const result={};
+
+  const lorry=extractLorryNumber(text);
+  if(lorry)result.lorry=lorry;
+
+  // Owner name: "X ka lorry" or first word(s) before "ka"
+  const kaMatch=text.match(/^([\w\s]+?)\s+ka\s+lorry/i);
+  if(kaMatch)result.owner=kaMatch[1].trim();
+
+  // Freight
+  const freightPatterns=[
+    /freight\s+([\w\s]+?)\s*(?:hazaar|thousand|lakh)/i,
+    /freight\s+(\d+)/i,
+  ];
+  for(const p of freightPatterns){
+    const m=t.match(p);
+    if(m){const n=parseHindiNumber(m[1]+' '+(m[0].match(/hazaar|thousand|lakh/i)||[''])[0]);if(n)result.freight=n;break;}
+  }
+
+  // Advance
+  const advPatterns=[
+    /advance\s+([\w\s]+?)\s*(?:hazaar|thousand|lakh)/i,
+    /advance\s+(\d+)/i,
+  ];
+  for(const p of advPatterns){
+    const m=t.match(p);
+    if(m){const n=parseHindiNumber(m[1]+' '+(m[0].match(/hazaar|thousand|lakh/i)||[''])[0]);if(n)result.advance=n;break;}
+  }
+
+  return result;
+}
+
+function capitalize(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
+
+function fillIncomeFields(parsed){
+  if(parsed.party)document.getElementById('fi-party').value=parsed.party;
+  if(parsed.lorry)document.getElementById('fi-lorry').value=parsed.lorry;
+  if(parsed.from)document.getElementById('fi-from').value=parsed.from;
+  if(parsed.to)document.getElementById('fi-to').value=parsed.to;
+  if(parsed.freight)document.getElementById('fi-freight').value=parsed.freight;
+  if(parsed.advance)document.getElementById('fi-advance').value=parsed.advance;
+}
+
+function fillExpenseFields(parsed){
+  if(parsed.owner)document.getElementById('fe-owner').value=parsed.owner;
+  if(parsed.lorry)document.getElementById('fe-lorry').value=parsed.lorry;
+  if(parsed.freight)document.getElementById('fe-freight').value=parsed.freight;
+  if(parsed.advance)document.getElementById('fe-advance').value=parsed.advance;
+}
+
+function startVoice(formType){
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+    showToast('Voice not supported on this browser. Use Chrome.','error');return;
+  }
+  if(isListening){recognition&&recognition.stop();return;}
+
+  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SpeechRecognition();
+  recognition.lang='hi-IN';
+  recognition.interimResults=true;
+  recognition.maxAlternatives=3;
+  recognition.continuous=false;
+
+  const btn=document.getElementById('voice-btn-'+formType);
+  const transcript=document.getElementById('transcript-'+formType);
+
+  isListening=true;
+  btn.classList.add('listening');
+  btn.innerHTML='<i class="ti ti-microphone"></i> Listening... tap to stop';
+  transcript.className='voice-transcript show';
+  transcript.textContent='Speak now...';
+
+  recognition.onresult=(e)=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    transcript.textContent=final||interim;
+    if(final){
+      btn.classList.remove('listening');
+      btn.classList.add('processing');
+      btn.innerHTML='<i class="ti ti-loader-2"></i> Processing...';
+      setTimeout(()=>{
+        const parsed=formType==='income'?parseVoiceIncome(final):parseVoiceExpense(final);
+        if(formType==='income')fillIncomeFields(parsed);
+        else fillExpenseFields(parsed);
+        btn.classList.remove('processing');
+        btn.innerHTML='<i class="ti ti-microphone"></i> Tap and speak again';
+        transcript.textContent='✓ '+final;
+        isListening=false;
+        const filled=Object.keys(parsed).length;
+        showToast(filled>0?filled+' field(s) filled from voice':'Could not parse — please fill manually','success');
+      },400);
+    }
+  };
+
+  recognition.onerror=(e)=>{
+    btn.classList.remove('listening','processing');
+    btn.innerHTML='<i class="ti ti-microphone"></i> Tap and speak in Hindi / English';
+    transcript.textContent='Error: '+e.error+'. Try again.';
+    isListening=false;
+    showToast('Voice error: '+e.error,'error');
+  };
+
+  recognition.onend=()=>{
+    if(isListening){
+      btn.classList.remove('listening');
+      btn.innerHTML='<i class="ti ti-microphone"></i> Tap and speak in Hindi / English';
+      isListening=false;
+    }
+  };
+
+  recognition.start();
+}
+// ── END VOICE ─────────────────────────────────────────────
+
+async function startApp(){
+  const firm=document.getElementById('opening-firm').value.trim()||'My Brokerage';
+  const cash=parseFloat(document.getElementById('opening-cash').value)||0;
+  const bank=parseFloat(document.getElementById('opening-bank').value)||0;
+  const btn=document.getElementById('btn-start-app');
+  btn.disabled=true;btn.textContent='Saving...';
+  try{await supa('POST','bb_settings',{id:'main',firm_name:firm,cash_balance:cash,bank_balance:bank});}
+  catch(e){try{await supa('PATCH','bb_settings',{firm_name:firm,cash_balance:cash,bank_balance:bank},'id=eq.main');}
+  catch(e2){showToast('Error: '+e2.message,'error');btn.disabled=false;btn.textContent='Start BoloBahi →';return;}}
+  S.firmName=firm;S.cashBalance=cash;S.bankBalance=bank;launchMain();
+}
+function launchMain(){
+  document.getElementById('setup-view').style.display='none';
+  document.getElementById('main-view').style.display='block';
+  document.getElementById('firm-display').textContent=S.firmName;
+  document.getElementById('today-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  updateBalances();renderContent();
+}
+async function loadSettings(){
+  try{
+    const data=await supa('GET','bb_settings',null,'id=eq.main');
+    if(data&&data.length>0){const s=data[0];S.firmName=s.firm_name||'My Brokerage';S.cashBalance=parseFloat(s.cash_balance)||0;S.bankBalance=parseFloat(s.bank_balance)||0;launchMain();return true;}
+  }catch(e){}
+  return false;
+}
+function updateBalances(){document.getElementById('cash-balance').textContent=fmt(S.cashBalance);document.getElementById('bank-balance').textContent=fmt(S.bankBalance);}
+async function updateSettingsBalance(){try{await supa('PATCH','bb_settings',{cash_balance:S.cashBalance,bank_balance:S.bankBalance},'id=eq.main');}catch(e){}}
+function switchTab(tab){S.activeTab=tab;['dashboard','freight','cash','bank','debtors','creditors'].forEach(t=>{const el=document.getElementById('tab-'+t);if(el)el.classList.toggle('active',t===tab);});renderContent();}
+async function renderContent(){
+  const area=document.getElementById('content-area');
+  if(S.activeTab==='dashboard')await renderDashboard(area);
+  else if(S.activeTab==='freight')await renderFreight(area);
+  else if(S.activeTab==='cash')await renderBook(area,'cash');
+  else if(S.activeTab==='bank')await renderBook(area,'bank');
+  else if(S.activeTab==='debtors')await renderLedger(area,'debtors');
+  else if(S.activeTab==='creditors')await renderLedger(area,'creditors');
+}
+
+let dashFrom=fyStart(),dashTo=fyEnd();
+async function renderDashboard(area){
+  area.innerHTML=`
+  <div class="dash-period">
+    <div class="section-label" style="margin-bottom:8px;">Period filter</div>
+    <div class="dash-period-row">
+      <input type="date" id="dash-from" value="${dashFrom}"/>
+      <span style="font-size:12px;color:#aaa;">to</span>
+      <input type="date" id="dash-to" value="${dashTo}"/>
+      <button onclick="applyDashPeriod()">Apply</button>
+    </div>
+  </div>
+  <div id="dash-numbers"><div class="loading-state">Loading...</div></div>`;
+  await loadDashNumbers();
+}
+async function applyDashPeriod(){dashFrom=document.getElementById('dash-from').value;dashTo=document.getElementById('dash-to').value;await loadDashNumbers();}
+async function loadDashNumbers(){
+  const area=document.getElementById('dash-numbers');
+  if(!area)return;
+  try{
+    const [incomes,expenses,cashE,bankE]=await Promise.all([
+      supa('GET','bb_freight_income',null,`entry_date=gte.${dashFrom}&entry_date=lte.${dashTo}&order=entry_date.desc`),
+      supa('GET','bb_freight_expense',null,`entry_date=gte.${dashFrom}&entry_date=lte.${dashTo}&order=entry_date.desc`),
+      supa('GET','bb_cash',null,`entry_date=gte.${dashFrom}&entry_date=lte.${dashTo}`),
+      supa('GET','bb_bank',null,`entry_date=gte.${dashFrom}&entry_date=lte.${dashTo}`)
+    ]);
+    const totalIncome=(incomes||[]).reduce((a,e)=>a+parseFloat(e.freight||0),0);
+    const totalAdvIncome=(incomes||[]).reduce((a,e)=>a+parseFloat(e.advance||0),0);
+    const totalBalReceivable=(incomes||[]).filter(e=>e.pod_status==='POD Received').reduce((a,e)=>a+(parseFloat(e.freight||0)-parseFloat(e.advance||0)),0);
+    const totalExpense=(expenses||[]).reduce((a,e)=>a+parseFloat(e.freight||0),0);
+    const totalAdvExpense=(expenses||[]).reduce((a,e)=>a+parseFloat(e.advance||0),0);
+    const totalBalPayable=(expenses||[]).filter(e=>e.pod_status==='POD Received').reduce((a,e)=>a+(parseFloat(e.freight||0)-parseFloat(e.advance||0)),0);
+    const margin=totalIncome-totalExpense;
+    const podPendingList=(incomes||[]).filter(e=>e.pod_status==='POD Pending');
+    const cashReceipts=(cashE||[]).filter(e=>e.type==='Receipt').reduce((a,e)=>a+parseFloat(e.amount||0),0);
+    const cashPayments=(cashE||[]).filter(e=>e.type==='Payment').reduce((a,e)=>a+parseFloat(e.amount||0),0);
+    const bankReceipts=(bankE||[]).filter(e=>e.type==='Receipt').reduce((a,e)=>a+parseFloat(e.amount||0),0);
+    const bankPayments=(bankE||[]).filter(e=>e.type==='Payment').reduce((a,e)=>a+parseFloat(e.amount||0),0);
+    let podHtml='';
+    if(podPendingList.length===0){podHtml='<div style="font-size:12px;color:#aaa;text-align:center;padding:8px 0;">No POD pending</div>';}
+    else{podPendingList.forEach(e=>{podHtml+=`<div class="pod-item"><div><div class="pod-party">${e.party}</div><div class="pod-lorry">${e.lorry} · ${e.route_from||''} → ${e.route_to||''}</div></div><div class="pod-date">${fmtDate(e.entry_date)}<br><span style="color:#E24B4A;font-size:10px;font-weight:500;">Bal: ${fmt(parseFloat(e.freight||0)-parseFloat(e.advance||0))}</span></div></div>`;});}
+    area.innerHTML=`
+    <div class="dash-grid">
+      <div class="dash-card"><div class="dash-label">Freight income</div><div class="dash-val green">${fmt(totalIncome)}</div><div class="dash-sub">Advance recd: ${fmt(totalAdvIncome)}</div></div>
+      <div class="dash-card"><div class="dash-label">Freight expense</div><div class="dash-val red">${fmt(totalExpense)}</div><div class="dash-sub">Advance paid: ${fmt(totalAdvExpense)}</div></div>
+      <div class="dash-card"><div class="dash-label">Broker margin</div><div class="dash-val ${margin>=0?'green':'red'}">${fmt(margin)}</div><div class="dash-sub">${(incomes||[]).length} trips</div></div>
+      <div class="dash-card"><div class="dash-label">Balance receivable</div><div class="dash-val green">${fmt(totalBalReceivable)}</div><div class="dash-sub">POD received trips</div></div>
+      <div class="dash-card"><div class="dash-label">Balance payable</div><div class="dash-val red">${fmt(totalBalPayable)}</div><div class="dash-sub">POD received trips</div></div>
+      <div class="dash-card"><div class="dash-label">Cash flow</div><div class="dash-val green">+${fmt(cashReceipts)}</div><div class="dash-sub">Out: ${fmt(cashPayments)}</div></div>
+      <div class="dash-card full"><div class="dash-label">Bank flow</div><div class="dash-val green">+${fmt(bankReceipts)}</div><div class="dash-sub">Out: ${fmt(bankPayments)}</div></div>
+    </div>
+    <div class="pod-list">
+      <div class="section-label" style="margin-bottom:8px;">POD pending — party wise <span style="background:#FAEEDA;color:#854F0B;padding:2px 8px;border-radius:20px;font-size:10px;">${podPendingList.length}</span></div>
+      ${podHtml}
+    </div>`;
+  }catch(e){area.innerHTML='<div class="empty-state">Error loading dashboard.</div>';}
+}
+
+async function renderFreight(area){
+  let html=`
+  <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <button class="add-btn" style="margin:0;flex:1;" onclick="openIncomeModal()"><i class="ti ti-arrow-down-circle"></i> Income</button>
+    <button class="add-btn" style="margin:0;flex:1;background:#E24B4A;" onclick="openExpenseModal()"><i class="ti ti-arrow-up-circle"></i> Expense</button>
+  </div>
+  <button class="export-btn" onclick="exportFreight()"><i class="ti ti-file-spreadsheet"></i> Export to Excel</button>`;
+  area.innerHTML=html+'<div class="loading-state">Loading entries...</div>';
+  try{
+    const [incomes,expenses]=await Promise.all([supa('GET','bb_freight_income',null,'order=entry_date.desc'),supa('GET','bb_freight_expense',null,'order=entry_date.desc')]);
+    let ehtml=html;
+    if((!incomes||incomes.length===0)&&(!expenses||expenses.length===0)){ehtml+='<div class="empty-state"><i class="ti ti-truck"></i>No freight entries yet.</div>';}
+    else{
+      const lorryMap={};
+      (incomes||[]).forEach(e=>{if(!lorryMap[e.lorry])lorryMap[e.lorry]={income:null,expense:null};lorryMap[e.lorry].income=e;});
+      (expenses||[]).forEach(e=>{if(!lorryMap[e.lorry])lorryMap[e.lorry]={income:null,expense:null};lorryMap[e.lorry].expense=e;});
+      ehtml+='<div class="section-label">All trips</div>';
+      Object.entries(lorryMap).forEach(([lorry,trip])=>{
+        const inc=trip.income,exp=trip.expense;
+        const margin=inc&&exp?parseFloat(inc.freight||0)-parseFloat(exp.freight||0):null;
+        ehtml+=`<div class="trip-card"><div class="trip-header"><div><div class="trip-lorry">${lorry}</div>${inc?`<div class="trip-route">${inc.route_from} → ${inc.route_to}</div>`:''}</div>${margin!==null?`<div class="trip-margin">Margin: ${fmt(margin)}</div>`:''}</div>`;
+        if(inc){const balInc=parseFloat(inc.freight||0)-parseFloat(inc.advance||0);ehtml+=`<div class="trip-side"><div class="trip-side-label">Income — from party</div><div style="display:flex;justify-content:space-between;align-items:center;"><div class="trip-side-party">${inc.party}</div><span class="badge ${inc.pod_status==='POD Received'?'badge-received':'badge-pending'}">${inc.pod_status}</span></div><div class="trip-side-nums"><div class="tsn">Freight: <span>${fmt(inc.freight)}</span></div><div class="tsn">Advance: <span>${fmt(inc.advance)}</span></div><div class="tsn">Balance: <span style="color:#1D9E75;">${fmt(balInc)}</span></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;"><span style="font-size:10px;color:#bbb;">${fmtDate(inc.entry_date)}</span><div style="display:flex;gap:6px;"><button class="btn-edit" onclick="editIncome('${inc.id}')"><i class="ti ti-edit"></i> Edit</button><button class="btn-delete" onclick="confirmDelete('income','${inc.id}')"><i class="ti ti-trash"></i></button></div></div></div>`;}
+        if(exp){const balExp=parseFloat(exp.freight||0)-parseFloat(exp.advance||0);ehtml+=`<div class="trip-side"><div class="trip-side-label">Expense — to lorry owner</div><div style="display:flex;justify-content:space-between;align-items:center;"><div class="trip-side-party">${exp.owner_name}</div><span class="badge ${exp.pod_status==='POD Received'?'badge-received':'badge-pending'}">${exp.pod_status}</span></div><div class="trip-side-nums"><div class="tsn">Freight: <span>${fmt(exp.freight)}</span></div><div class="tsn">Advance: <span>${fmt(exp.advance)}</span></div><div class="tsn">Balance: <span style="color:#E24B4A;">${fmt(balExp)}</span></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;"><span style="font-size:10px;color:#bbb;">${fmtDate(exp.entry_date)}</span><div style="display:flex;gap:6px;"><button class="btn-edit" onclick="editExpense('${exp.id}')"><i class="ti ti-edit"></i> Edit</button><button class="btn-delete" onclick="confirmDelete('expense','${exp.id}')"><i class="ti ti-trash"></i></button></div></div></div>`;}
+        ehtml+='</div>';
+      });
+    }
+    area.innerHTML=ehtml;
+  }catch(err){area.innerHTML=html+'<div class="empty-state">Error loading entries.</div>';}
+}
+
+function openIncomeModal(prefill){
+  document.getElementById('fi-id').value='';
+  ['fi-party','fi-lorry','fi-from','fi-to','fi-freight','fi-advance'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fi-pod').value='POD Pending';
+  document.getElementById('fi-date').value=todayStr();
+  document.getElementById('voice-btn-income').className='voice-btn';
+  document.getElementById('voice-btn-income').innerHTML='<i class="ti ti-microphone"></i> Tap and speak in Hindi / English';
+  document.getElementById('transcript-income').className='voice-transcript';
+  if(prefill){Object.entries(prefill).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});}
+  document.getElementById('save-income-btn').textContent='Save entry';
+  openModal('modal-income');
+}
+function openExpenseModal(prefill){
+  document.getElementById('fe-id').value='';
+  ['fe-owner','fe-lorry','fe-freight','fe-advance'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fe-pod').value='POD Pending';
+  document.getElementById('fe-date').value=todayStr();
+  document.getElementById('voice-btn-expense').className='voice-btn';
+  document.getElementById('voice-btn-expense').innerHTML='<i class="ti ti-microphone"></i> Tap and speak in Hindi / English';
+  document.getElementById('transcript-expense').className='voice-transcript';
+  if(prefill){Object.entries(prefill).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});}
+  document.getElementById('save-expense-btn').textContent='Save entry';
+  openModal('modal-expense');
+}
+async function editIncome(id){
+  try{const data=await supa('GET','bb_freight_income',null,'id=eq.'+id);if(data&&data[0]){const e=data[0];openIncomeModal({'fi-id':e.id,'fi-party':e.party,'fi-lorry':e.lorry,'fi-from':e.route_from,'fi-to':e.route_to,'fi-freight':e.freight,'fi-advance':e.advance,'fi-pod':e.pod_status,'fi-date':e.entry_date});document.getElementById('save-income-btn').textContent='Update entry';}}
+  catch(err){showToast('Error loading entry','error');}
+}
+async function editExpense(id){
+  try{const data=await supa('GET','bb_freight_expense',null,'id=eq.'+id);if(data&&data[0]){const e=data[0];openExpenseModal({'fe-id':e.id,'fe-owner':e.owner_name,'fe-lorry':e.lorry,'fe-freight':e.freight,'fe-advance':e.advance,'fe-pod':e.pod_status,'fe-date':e.entry_date});document.getElementById('save-expense-btn').textContent='Update entry';}}
+  catch(err){showToast('Error loading entry','error');}
+}
+async function saveIncome(){
+  const btn=document.getElementById('save-income-btn');btn.disabled=true;btn.textContent='Saving...';
+  const id=document.getElementById('fi-id').value;
+  const entry={party:document.getElementById('fi-party').value||'Unknown',lorry:document.getElementById('fi-lorry').value||'Unknown',route_from:document.getElementById('fi-from').value||'-',route_to:document.getElementById('fi-to').value||'-',freight:parseFloat(document.getElementById('fi-freight').value)||0,advance:parseFloat(document.getElementById('fi-advance').value)||0,pod_status:document.getElementById('fi-pod').value,entry_date:document.getElementById('fi-date').value||todayStr()};
+  try{if(id)await supa('PATCH','bb_freight_income',entry,'id=eq.'+id);else await supa('POST','bb_freight_income',entry);showToast(id?'Entry updated!':'Income entry saved!','success');closeModal('modal-income');await renderContent();}
+  catch(e){showToast('Error: '+e.message,'error');}
+  btn.disabled=false;btn.textContent='Save entry';
+}
+async function saveExpense(){
+  const btn=document.getElementById('save-expense-btn');btn.disabled=true;btn.textContent='Saving...';
+  const id=document.getElementById('fe-id').value;
+  const entry={owner_name:document.getElementById('fe-owner').value||'Unknown',lorry:document.getElementById('fe-lorry').value||'Unknown',freight:parseFloat(document.getElementById('fe-freight').value)||0,advance:parseFloat(document.getElementById('fe-advance').value)||0,pod_status:document.getElementById('fe-pod').value,entry_date:document.getElementById('fe-date').value||todayStr()};
+  try{if(id)await supa('PATCH','bb_freight_expense',entry,'id=eq.'+id);else await supa('POST','bb_freight_expense',entry);showToast(id?'Entry updated!':'Expense entry saved!','success');closeModal('modal-expense');await renderContent();}
+  catch(e){showToast('Error: '+e.message,'error');}
+  btn.disabled=false;btn.textContent='Save entry';
+}
+
+async function renderBook(area,type){
+  const label=type==='cash'?'cash':'bank';
+  let html=`<button class="add-btn" onclick="openBookModal('${type}')"><i class="ti ti-plus"></i> Add ${label} entry</button><button class="export-btn" onclick="exportBook('${type}')"><i class="ti ti-file-spreadsheet"></i> Export to Excel</button>`;
+  area.innerHTML=html+'<div class="loading-state">Loading entries...</div>';
+  try{
+    const entries=await supa('GET','bb_'+type,null,'order=entry_date.desc,created_at.desc');
+    let ehtml=html;
+    if(!entries||entries.length===0){ehtml+=`<div class="empty-state"><i class="ti ti-notebook"></i>No ${label} entries yet.</div>`;}
+    else{
+      ehtml+='<div class="section-label">All entries</div>';
+      entries.forEach(e=>{const isR=e.type==='Receipt';ehtml+=`<div class="entry-card"><div class="entry-top"><div><div class="entry-party">${e.party}</div><div class="entry-sub">${e.narration||''}</div></div><div class="entry-amount ${isR?'amount-receipt':'amount-payment'}">${isR?'+':'-'}${fmt(e.amount)}</div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span class="badge ${isR?'badge-receipt':'badge-payment'}">${e.type}</span><span style="font-size:11px;color:#aaa;">Bal: ${fmt(e.running_balance)}</span></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:0.5px solid #f0f0f0;"><span style="font-size:10px;color:#bbb;">${fmtDate(e.entry_date)}</span><div style="display:flex;gap:6px;"><button class="btn-edit" onclick="editBook('${type}','${e.id}')"><i class="ti ti-edit"></i> Edit</button><button class="btn-delete" onclick="confirmDelete('${type}','${e.id}')"><i class="ti ti-trash"></i></button></div></div></div>`;});
+    }
+    area.innerHTML=ehtml;
+  }catch(err){area.innerHTML=html+'<div class="empty-state">Error loading entries.</div>';}
+}
+function openBookModal(type){
+  const p=type==='cash'?'c':'b';
+  document.getElementById(p+'-id').value='';
+  [p+'-party',p+'-narration',p+'-amount'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById(p+'-type').value='Receipt';
+  document.getElementById(p+'-date').value=todayStr();
+  openModal('modal-'+type);
+}
+async function editBook(type,id){
+  try{const data=await supa('GET','bb_'+type,null,'id=eq.'+id);if(data&&data[0]){const e=data[0];const p=type==='cash'?'c':'b';document.getElementById(p+'-id').value=e.id;document.getElementById(p+'-type').value=e.type;document.getElementById(p+'-party').value=e.party;document.getElementById(p+'-narration').value=e.narration||'';document.getElementById(p+'-amount').value=e.amount;document.getElementById(p+'-date').value=e.entry_date||todayStr();openModal('modal-'+type);}}
+  catch(err){showToast('Error loading entry','error');}
+}
+async function saveCash(){
+  const btn=document.getElementById('save-cash-btn');btn.disabled=true;btn.textContent='Saving...';
+  const id=document.getElementById('c-id').value;const amount=parseFloat(document.getElementById('c-amount').value)||0;const type=document.getElementById('c-type').value;
+  if(!id){if(type==='Receipt')S.cashBalance+=amount;else S.cashBalance-=amount;}
+  const entry={type,amount,party:document.getElementById('c-party').value||'Unknown',narration:document.getElementById('c-narration').value||'',running_balance:S.cashBalance,entry_date:document.getElementById('c-date').value||todayStr()};
+  try{if(id)await supa('PATCH','bb_cash',{type:entry.type,party:entry.party,narration:entry.narration,entry_date:entry.entry_date},'id=eq.'+id);else await supa('POST','bb_cash',entry);if(!id)await updateSettingsBalance();updateBalances();showToast(id?'Entry updated!':'Cash entry saved!','success');closeModal('modal-cash');await renderContent();}
+  catch(e){showToast('Error: '+e.message,'error');if(!id){if(type==='Receipt')S.cashBalance-=amount;else S.cashBalance+=amount;}}
+  btn.disabled=false;btn.textContent='Save entry';
+}
+async function saveBank(){
+  const btn=document.getElementById('save-bank-btn');btn.disabled=true;btn.textContent='Saving...';
+  const id=document.getElementById('b-id').value;const amount=parseFloat(document.getElementById('b-amount').value)||0;const type=document.getElementById('b-type').value;
+  if(!id){if(type==='Receipt')S.bankBalance+=amount;else S.bankBalance-=amount;}
+  const entry={type,amount,party:document.getElementById('b-party').value||'Unknown',narration:document.getElementById('b-narration').value||'',running_balance:S.bankBalance,entry_date:document.getElementById('b-date').value||todayStr()};
+  try{if(id)await supa('PATCH','bb_bank',{type:entry.type,party:entry.party,narration:entry.narration,entry_date:entry.entry_date},'id=eq.'+id);else await supa('POST','bb_bank',entry);if(!id)await updateSettingsBalance();updateBalances();showToast(id?'Entry updated!':'Bank entry saved!','success');closeModal('modal-bank');await renderContent();}
+  catch(e){showToast('Error: '+e.message,'error');if(!id){if(type==='Receipt')S.bankBalance-=amount;else S.bankBalance+=amount;}}
+  btn.disabled=false;btn.textContent='Save entry';
+}
+
+async function renderLedger(area,type){
+  const isDebtors=type==='debtors';
+  let html=`<button class="export-btn" onclick="exportLedger('${type}')"><i class="ti ti-file-spreadsheet"></i> Export ${isDebtors?'Debtors':'Creditors'} to Excel</button>`;
+  area.innerHTML=html+'<div class="loading-state">Loading ledger...</div>';
+  try{
+    const entries=await supa('GET',isDebtors?'bb_freight_income':'bb_freight_expense',null,'order=entry_date.desc');
+    const map={};
+    (entries||[]).forEach(e=>{const name=isDebtors?e.party:e.owner_name;if(!map[name])map[name]={name,total:0,advance:0,balance:0,trips:0,podPending:0};map[name].total+=parseFloat(e.freight||0);map[name].advance+=parseFloat(e.advance||0);map[name].balance+=(parseFloat(e.freight||0)-parseFloat(e.advance||0));map[name].trips++;if(e.pod_status==='POD Pending')map[name].podPending++;});
+    const parties=Object.values(map).sort((a,b)=>b.balance-a.balance);
+    let ehtml=html+`<div class="section-label">${isDebtors?'Parties who owe you':'Lorry owners you owe'}</div>`;
+    if(parties.length===0){ehtml+='<div class="empty-state"><i class="ti ti-users"></i>No entries yet.</div>';}
+    else{parties.forEach(p=>{ehtml+=`<div class="ledger-card"><div style="display:flex;justify-content:space-between;align-items:center;"><div class="ledger-party">${p.name}</div><div class="ledger-amount ${isDebtors?'amount-receipt':'amount-payment'}">${fmt(p.balance)}</div></div><div class="ledger-sub">Total: ${fmt(p.total)} · Advance: ${fmt(p.advance)} · ${p.trips} trip(s)</div>${p.podPending>0?`<div style="margin-top:6px;"><span class="badge badge-pending">${p.podPending} POD pending</span></div>`:''}</div>`;});}
+    area.innerHTML=ehtml;
+  }catch(e){area.innerHTML=html+'<div class="empty-state">Error loading ledger.</div>';}
+}
+
+async function exportFreight(){
+  try{
+    const [inc,exp]=await Promise.all([supa('GET','bb_freight_income',null,'order=entry_date.desc'),supa('GET','bb_freight_expense',null,'order=entry_date.desc')]);
+    const wb=XLSX.utils.book_new();
+    const incData=[['Date','Party','Lorry','From','To','Freight','Advance','Balance','POD Status']];
+    (inc||[]).forEach(e=>incData.push([e.entry_date,e.party,e.lorry,e.route_from,e.route_to,e.freight,e.advance,e.freight-e.advance,e.pod_status]));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(incData),'Freight Income');
+    const expData=[['Date','Lorry Owner','Lorry','Freight','Advance','Balance','POD Status']];
+    (exp||[]).forEach(e=>expData.push([e.entry_date,e.owner_name,e.lorry,e.freight,e.advance,e.freight-e.advance,e.pod_status]));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(expData),'Freight Expense');
+    XLSX.writeFile(wb,'BoloBahi_Freight.xlsx');showToast('Excel downloaded!','success');
+  }catch(e){showToast('Export error','error');}
+}
+async function exportBook(type){
+  try{
+    const entries=await supa('GET','bb_'+type,null,'order=entry_date.desc');
+    const data=[['Date','Type','Party','Narration','Amount','Running Balance']];
+    (entries||[]).forEach(e=>data.push([e.entry_date,e.type,e.party,e.narration,e.amount,e.running_balance]));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),type==='cash'?'Cash Book':'Bank Book');
+    XLSX.writeFile(wb,'BoloBahi_'+(type==='cash'?'CashBook':'BankBook')+'.xlsx');showToast('Excel downloaded!','success');
+  }catch(e){showToast('Export error','error');}
+}
+async function exportLedger(type){
+  const isDebtors=type==='debtors';
+  try{
+    const entries=await supa('GET',isDebtors?'bb_freight_income':'bb_freight_expense',null,'order=entry_date.desc');
+    const map={};
+    (entries||[]).forEach(e=>{const name=isDebtors?e.party:e.owner_name;if(!map[name])map[name]={name,total:0,advance:0,balance:0,trips:0,podPending:0};map[name].total+=parseFloat(e.freight||0);map[name].advance+=parseFloat(e.advance||0);map[name].balance+=(parseFloat(e.freight||0)-parseFloat(e.advance||0));map[name].trips++;if(e.pod_status==='POD Pending')map[name].podPending++;});
+    const data=[[isDebtors?'Party Name':'Lorry Owner','Total Freight','Advance','Balance Due','Trips','POD Pending']];
+    Object.values(map).sort((a,b)=>b.balance-a.balance).forEach(p=>data.push([p.name,p.total,p.advance,p.balance,p.trips,p.podPending]));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),isDebtors?'Debtors':'Creditors');
+    XLSX.writeFile(wb,'BoloBahi_'+(isDebtors?'Debtors':'Creditors')+'.xlsx');showToast('Excel downloaded!','success');
+  }catch(e){showToast('Export error','error');}
+}
+
+function confirmDelete(type,id){
+  deleteCallback=async()=>{try{await supa('DELETE','bb_'+(type==='income'?'freight_income':type==='expense'?'freight_expense':type),null,'id=eq.'+id);showToast('Entry deleted','success');closeConfirm();await renderContent();}catch(e){showToast('Error: '+e.message,'error');}};
+  document.getElementById('confirm-overlay').classList.add('open');
+  document.getElementById('btn-confirm-delete').onclick=deleteCallback;
+}
+function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open');}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){if(isListening){recognition&&recognition.stop();isListening=false;}document.getElementById(id).classList.remove('open');}
+loadSettings();
+</script>
+</body>
+</html>
